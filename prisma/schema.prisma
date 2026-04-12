@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String         @id @default(cuid())
+  email     String         @unique
+  password  String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  progress  UserProgress[]
+}
+
+// englishWord is NOT unique — the same word can have different
+// Indonesian meanings depending on context (e.g. "bank" as tepi sungai
+// vs bank as bank). Each row is one word+meaning pair.
+model VocabWord {
+  id                String         @id @default(cuid())
+  englishWord       String
+  indonesianMeaning String
+  sentences         Sentence[]
+  progress          UserProgress[]
+  createdAt         DateTime       @default(now())
+}
+
+// Each sentence belongs to one VocabWord. The target word inside
+// the sentence text is wrapped with [[double brackets]] so the UI
+// knows which word to bold and underline.
+// Example: "She showed great [[perseverance]] during the marathon."
+model Sentence {
+  id        String    @id @default(cuid())
+  wordId    String
+  text      String
+  word      VocabWord @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+}
+
+model UserProgress {
+  id        String    @id @default(cuid())
+  userId    String
+  wordId    String
+  score     Int       @default(0) // 0 (min) to 5 (max)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  word      VocabWord @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, wordId])
+}
