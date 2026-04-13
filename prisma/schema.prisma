@@ -26,6 +26,8 @@ model VocabWord {
   sentences         Sentence[]
   progress          UserProgress[]
   createdAt         DateTime       @default(now())
+
+  @@unique([englishWord, indonesianMeaning])
 }
 
 // Each sentence belongs to one VocabWord. The target word inside
