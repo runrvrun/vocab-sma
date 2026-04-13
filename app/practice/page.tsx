@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { signOut, useSession } from "next-auth/react"
 
 interface Question {
@@ -50,14 +50,32 @@ export default function PracticePage() {
   const [question, setQuestion] = useState<Question | null>(null)
   const [revealed, setRevealed] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
-  const [lastResult, setLastResult] = useState<{ correct: boolean; newScore: number } | null>(null)
+
+  // Holds an in-flight prefetch Promise so fetchQuestion can consume it
+  // instead of firing a second network request.
+  const prefetchRef = useRef<Promise<Question | null> | null>(null)
 
   const fetchQuestion = useCallback(async () => {
+    // Grab and clear whatever prefetch is pending
+    const prefetch = prefetchRef.current
+    prefetchRef.current = null
+
+    if (prefetch) {
+      const next = await prefetch
+      if (next) {
+        // All updates in one synchronous block → single React render, no loading flash
+        setQuestion(next)
+        setRevealed(false)
+        setError("")
+        setLoading(false)
+        return
+      }
+      // Prefetch failed — fall through to a fresh fetch below
+    }
+
     setLoading(true)
     setRevealed(false)
-    setLastResult(null)
     setError("")
 
     const res = await fetch("/api/practice/question")
@@ -68,7 +86,7 @@ export default function PracticePage() {
       return
     }
 
-    const data = await res.json()
+    const data: Question = await res.json()
     setQuestion(data)
     setLoading(false)
   }, [])
@@ -77,24 +95,27 @@ export default function PracticePage() {
     fetchQuestion()
   }, [fetchQuestion])
 
-  async function handleAnswer(correct: boolean) {
-    if (!question || submitting) return
-    setSubmitting(true)
+  function handleReveal() {
+    setRevealed(true)
+    // Start prefetching the next question while the user reads the answer.
+    // By the time they tap Sudah/Belum Hafal the fetch will already be resolved.
+    prefetchRef.current = fetch("/api/practice/question")
+      .then((res) => (res.ok ? (res.json() as Promise<Question>) : null))
+      .catch(() => null)
+  }
 
-    const res = await fetch("/api/practice/answer", {
+  function handleAnswer(correct: boolean) {
+    if (!question) return
+
+    // Fire-and-forget — saving progress doesn't block the UI
+    fetch("/api/practice/answer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ wordId: question.wordId, correct }),
-    })
+    }).catch(() => {})
 
-    const data = await res.json()
-    setSubmitting(false)
-
-    if (res.ok) {
-      setLastResult({ correct, newScore: data.newScore })
-      // Brief pause then load next question
-      setTimeout(fetchQuestion, 1200)
-    }
+    // Prefetch is already resolved by now → next question appears instantly
+    fetchQuestion()
   }
 
   return (
@@ -139,7 +160,7 @@ export default function PracticePage() {
                 <span className="text-xs text-gray-400 uppercase tracking-wide">
                   Progress kata ini
                 </span>
-                <ScoreDots score={lastResult?.newScore ?? question.score} />
+                <ScoreDots score={question.score} />
               </div>
 
               {/* Instruction */}
@@ -155,7 +176,7 @@ export default function PracticePage() {
               {/* Reveal or Answer buttons */}
               {!revealed ? (
                 <button
-                  onClick={() => setRevealed(true)}
+                  onClick={handleReveal}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl py-3 transition"
                 >
                   Lihat Jawaban
@@ -168,36 +189,21 @@ export default function PracticePage() {
                     <p className="text-2xl font-bold text-blue-700">{question.indonesianMeaning}</p>
                   </div>
 
-                  {/* Result feedback */}
-                  {lastResult && (
-                    <p
-                      className={`text-center text-sm font-medium ${
-                        lastResult.correct ? "text-green-600" : "text-red-500"
-                      }`}
-                    >
-                      {lastResult.correct ? "Benar! +1" : "Belum tepat. -1"}
-                    </p>
-                  )}
-
                   {/* Self-assessment buttons */}
-                  {!lastResult && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => handleAnswer(false)}
-                        disabled={submitting}
-                        className="bg-red-100 hover:bg-red-200 text-red-700 font-semibold rounded-xl py-3 transition disabled:opacity-60"
-                      >
-                        Belum Hafal
-                      </button>
-                      <button
-                        onClick={() => handleAnswer(true)}
-                        disabled={submitting}
-                        className="bg-green-100 hover:bg-green-200 text-green-700 font-semibold rounded-xl py-3 transition disabled:opacity-60"
-                      >
-                        Sudah Hafal
-                      </button>
-                    </div>
-                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => handleAnswer(false)}
+                      className="bg-red-100 hover:bg-red-200 text-red-700 font-semibold rounded-xl py-3 transition"
+                    >
+                      Belum Hafal
+                    </button>
+                    <button
+                      onClick={() => handleAnswer(true)}
+                      className="bg-green-100 hover:bg-green-200 text-green-700 font-semibold rounded-xl py-3 transition"
+                    >
+                      Sudah Hafal
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
