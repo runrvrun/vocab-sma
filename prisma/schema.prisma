@@ -8,12 +8,13 @@ datasource db {
 }
 
 model User {
-  id        String         @id @default(cuid())
-  email     String         @unique
-  password  String
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  progress  UserProgress[]
+  id          String         @id @default(cuid())
+  email       String         @unique
+  password    String
+  lastSignIn  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  progress    UserProgress[]
 }
 
 // englishWord is NOT unique — the same word can have different
