@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
@@ -17,7 +18,7 @@ export default async function AdminUserPage() {
   return (
     <div className="min-h-screen bg-blue-50 flex flex-col">
       <header className="bg-white shadow-sm px-6 py-4">
-        <h1 className="text-lg font-bold text-blue-700">Vocab SMA</h1>
+        <Link href="/" className="text-lg font-bold text-blue-700">Vocab SMA</Link>
       </header>
 
       <main className="flex-1 px-6 py-10">

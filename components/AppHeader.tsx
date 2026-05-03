@@ -10,7 +10,7 @@ export default function AppHeader() {
 
   return (
     <header className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
-      <h1 className="text-lg font-bold text-blue-700">Vocab SMA</h1>
+      <Link href="/" className="text-lg font-bold text-blue-700">Vocab SMA</Link>
       <div className="flex items-center gap-4">
         <span className="text-sm text-gray-500 hidden sm:block">{session?.user?.email}</span>
         {pathname === "/practice" && (
