@@ -8,7 +8,7 @@ export default async function AdminUserPage() {
     orderBy: { createdAt: "asc" },
     include: {
       progress: {
-        select: { score: true },
+        select: { score: true, updatedAt: true },
       },
     },
   })
@@ -27,6 +27,10 @@ export default async function AdminUserPage() {
         <div className="space-y-4">
           {users.map((user) => {
             const total = user.progress.length
+            const lastActive = user.progress.reduce<Date | null>(
+              (max, p) => (max === null || p.updatedAt > max ? p.updatedAt : max),
+              null
+            )
             const scoreMap: Record<number, number> = {}
             for (const p of user.progress) {
               scoreMap[p.score] = (scoreMap[p.score] ?? 0) + 1
@@ -37,9 +41,9 @@ export default async function AdminUserPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
                   <p className="font-semibold text-gray-800">{user.email}</p>
                   <p className="text-sm text-gray-400">
-                    Last sign in:{" "}
-                    {user.lastSignIn
-                      ? user.lastSignIn.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
+                    Last active:{" "}
+                    {lastActive
+                      ? lastActive.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })
                       : "Never"}
                   </p>
                 </div>
