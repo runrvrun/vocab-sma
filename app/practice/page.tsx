@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { signOut, useSession } from "next-auth/react"
+import AppHeader from "@/components/AppHeader"
 
 interface Question {
   wordId: string
@@ -46,7 +46,6 @@ function ScoreDots({ score }: { score: number }) {
 }
 
 export default function PracticePage() {
-  const { data: session } = useSession()
   const [question, setQuestion] = useState<Question | null>(null)
   const [revealed, setRevealed] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -120,19 +119,7 @@ export default function PracticePage() {
 
   return (
     <div className="min-h-screen bg-blue-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-blue-700">Vocab SMA</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500 hidden sm:block">{session?.user?.email}</span>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-sm text-gray-500 hover:text-red-500 transition"
-          >
-            Keluar
-          </button>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main */}
       <main className="flex-1 flex items-center justify-center px-4 py-10">
